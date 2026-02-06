@@ -1,0 +1,1 @@
+export const EnvValidationSchema = null;

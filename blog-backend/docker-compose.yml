@@ -1,0 +1,40 @@
+services:
+  # PostgreSQL Service
+  postgres_db:
+    image: postgres:16-alpine # Use a recent, stable image
+    restart: always
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env # Load database credentials from a .env file
+    volumes:
+      # Persist data even if the container is removed
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # NestJS Application Service
+  nestjs_app:
+    build:
+      context: . # Build from the current directory, requires a Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000" # Expose the application on port 3000
+    depends_on:
+      - postgres_db # Ensure the database starts before the app
+    env_file:
+      - .env # Load environment variables for the app (e.g., database connection strings)
+    environment:
+      - DATABASE_HOST=postgres_db
+    networks:
+      - app-network
+    # Optional: run migrations or seed data after the database is ready
+    # command: ["./wait-for-it.sh", "postgres_db:5432", "--", "npm", "start"]
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
