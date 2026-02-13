@@ -1,5 +1,5 @@
 import { IsString, IsInt, IsNotEmpty, IsEmail, IsStrongPassword } from 'class-validator';
-import { UserRole } from '../types/user-role.enum';
+import { UserRole } from '../../auth/types/jwt-payload.type.ts';
 
 export class CreateUserDto {
     @IsString()

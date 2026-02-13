@@ -1,11 +1,14 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { UserRole } from "../types/user-role.enum";
+import { Column, CreateDateColumn, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn,Index } from "typeorm";
+import { UserRole } from "./user-role.entity";
+import { UserSession } from "./user_sessions.entity";
+import { PasswordResetToken } from "./password_reset_tokens.entity";
+import { EmailVerificationToken } from "../../auth/entities/email-verification-token.entity";
 
 
 @Entity('users')
 export class User {
-    @PrimaryGeneratedColumn()
-    id: number;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
     @Column({ type: 'varchar', length: 100 })
     firstName: string;
@@ -17,16 +20,17 @@ export class User {
     username: string;
 
     @Column({ type: 'varchar', length: 100, unique: true })
+    @Index()
     email: string;
 
     @Column({ type: 'varchar', length: 255 }) 
     password: string;
 
-    @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-    role: UserRole;
-
     @Column({ type: 'varchar', length: 100 })
     avatar: string;
+
+    @Column({type: 'varchar', length: 100})
+    roleId: string;
 
     @Column({ type: 'varchar', length: 100 })
     coverImage: string;
@@ -34,12 +38,27 @@ export class User {
     @Column({ type: 'varchar', length: 100 })
     bio: string;
 
-    @Column({ type: 'varchar', length: 100 })
-    refreshToken: string;
+    @Column({type:Boolean,default:true})
+    isActive:boolean;
 
+    @Column({ name: 'email_verified_at', type: 'timestamptz', nullable: true })
+    emailVerifiedAt: Date | null;
+    
     @CreateDateColumn()
     createdAt: Date;
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @OneToMany(() => UserRole, userRole => userRole.user)
+    userRoles: UserRole[];
+
+    @OneToMany(() => UserSession, userSession => userSession.user)
+    userSessions: UserSession[];
+
+    @OneToMany(() => PasswordResetToken, passwordResetToken => passwordResetToken.user)
+    passwordResetTokens: PasswordResetToken[];
+
+    @OneToMany(() => EmailVerificationToken, (t) => t.user)
+    emailVerificationTokens: EmailVerificationToken[];
 }
