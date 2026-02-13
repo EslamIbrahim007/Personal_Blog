@@ -1,16 +1,24 @@
-import { IsString, IsInt, IsNotEmpty } from 'class-validator';
+import { IsString, IsInt, IsNotEmpty, IsEmail, IsStrongPassword } from 'class-validator';
 import { UserRole } from '../types/user-role.enum';
 
 export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
-    name: string;
+    firstName: string;
 
     @IsString()
     @IsNotEmpty()
-    email: string;
+    lastName: string;
 
     @IsString()
+    @IsNotEmpty()
+    username: string;
+
+    @IsEmail()
+    @IsNotEmpty()
+    email: string;
+
+    @IsStrongPassword()
     @IsNotEmpty()
     password: string;
 

@@ -8,8 +8,13 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     });
+    app.enableCors();
     const config = app.get(config_1.ConfigService);
-    app.useGlobalPipes(new common_1.ValidationPipe());
+    app.useGlobalPipes(new common_1.ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+    }));
     await app.listen(config.get('port'));
     console.log(`Application is running on.🚀🚀🚀: ${await app.getUrl()}`);
 }

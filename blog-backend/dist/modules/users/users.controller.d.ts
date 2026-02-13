@@ -5,4 +5,5 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     create(createUserDto: CreateUserDto): Promise<import("./entities/user.entity").User>;
     findAll(): Promise<import("./entities/user.entity").User[]>;
+    findOneByEmail(email: string): Promise<import("./entities/user.entity").User>;
 }
