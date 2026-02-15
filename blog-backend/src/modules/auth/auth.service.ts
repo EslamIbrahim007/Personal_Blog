@@ -1,14 +1,23 @@
-import { Injectable, UnauthorizedException ,Logger} from '@nestjs/common';
+import {
+    Injectable, UnauthorizedException, Logger,
+    ForbiddenException,
+    NotFoundException
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../users/entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
-import{RegisterDto} from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { User } from '../users/entities/user.entity';
+import { UserSession } from './entities/user-session.entity';
+import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { JwtAccessPayload } from './types/jwt-payload.type';
+import { TokenService } from './services/token.service';
 
 @Injectable()
 export class AuthService {
@@ -16,116 +25,254 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
-        @InjectRepository(User) private readonly userRepository: Repository<User>,
         private readonly logger: Logger,
-    ) {}
+        private readonly tokenService: TokenService,
+        @InjectRepository(User) private readonly userRepository: Repository<User>,
+        @InjectRepository(UserSession) private readonly userSessionRepository: Repository<UserSession>,
+        @InjectRepository(EmailVerificationToken) private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
+        @InjectRepository(PasswordResetToken) private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
+    ) { }
 
-    async register(createUserDto: CreateUserDto) {
-        //1. Check if user exists
-        const user = await this.usersService.findOneByEmail(createUserDto.email);
-        if (user) {
-            throw new UnauthorizedException('User already exists');
-        }
-        //2. Create user
-        const createdUser = await this.usersService.create(createUserDto);
-        //3. Generate JWT token
-        const payload = { email: createdUser.email, sub: createdUser.id, role: createdUser.role };
-        //4. hash password
-        createdUser.password = await bcrypt.hash(createdUser.password, 10); 
-        //5. save user
-        await this.userRepository.save(createdUser);
-        //6. return access token
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: createdUser,
-        };
-    };
-    
-    async login(LoginDto: LoginDto) {
-        //1.expired refresh token
-        const expirationMs = this.configService.get<number>('JWT_EXPIRATION_MS');
-        const expirationDate = new Date(Date.now() + expirationMs);
-        const refreshExpirationMs = this.configService.get<number>('JWT_REFRESH_EXPIRATION_MS');
-        const refreshExpirationDate = new Date(Date.now() + refreshExpirationMs);
-        
-        //2. Check if user exists
-        const user = await this.usersService.findOneByEmail(LoginDto.email);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
-        //3. Check if password is valid
-        const isPasswordValid = await bcrypt.compare(LoginDto.password, user.password);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid password');
-        }
-        //4. Generate JWT token
-        const payload = { email: user.email, sub: user.id, role: user.role };
-        const accessToken = this.jwtService.sign(payload,{ expiresIn: this.configService.get<number>('JWT_EXPIRATION_MS')});
-        const refreshToken = this.jwtService.sign(payload,{ expiresIn: this.configService.get<number>('JWT_REFRESH_EXPIRATION_MS')});
-        //5. save refresh token
-        user.refreshToken = refreshToken;
-        await this.userRepository.save(user);
-        //6. return access token
-        return {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            user: user,
-        };
+    async register(registerDto: RegisterDto): Promise<void> {
+        //1. register user
+        const user = await this.usersService.create(registerDto);
+        //2. generate verification token
+        const { token, expiresAt } = await this.tokenService.generateEmailVerificationToken(24 * 60); //24 hours
+        const tokenHash = this.tokenService.hashToken(token); //hash token
+        //3. save verification token
+        await this.emailVerificationTokenRepository.save({
+            userId: user.id,
+            tokenHash,
+            expiresAt,
+        });
+        // TODO: send email via MailService (next step)
+        // verification link example: https://<frontend>/verify?token=<token>
+        // For API-only now: you can log token in dev (NOT prod).
+        // console.log({ verificationToken: token });
     };
 
-    //verifyUser
-    async verifyUser(LoginDto: LoginDto) {
-        const user = await this.usersService.findOneByEmail(LoginDto.email);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
+    async verifyEmail(token: string) {
+        //1.hash token
+        const tokenHash = this.tokenService.hashToken(token);
+        //2.find record
+        const record = await this.emailVerificationTokenRepository.findOne({
+            where: {
+                tokenHash,
+                expiresAt: MoreThan(new Date()),
+                usedAt: IsNull(),
+            }
+        });
+        if (!record) {
+            throw new UnauthorizedException('Invalid token');
         }
-        //2. Check if password is valid
-        const isPasswordValid = await bcrypt.compare(LoginDto.password, user.password);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid password');
+        //3.verify email
+        await this.userRepository.update(
+            { id: record.userId },
+            { emailVerifiedAt: new Date() },
+        );
+        //4.mark token as used
+        await this.emailVerificationTokenRepository.update(
+            { id: record.id },
+            { usedAt: new Date() },
+        );
+    };
+
+    private extractRolesAndPermissions(user: User): { roles: string[]; permissions: string[] } {
+        const roles = new Set<string>();
+        const permissions = new Set<string>();
+
+        for (const ur of user.userRoles ?? []) {
+            if (ur.role?.name) roles.add(ur.role.name);
+            for (const rp of ur.role?.rolePermissions ?? []) {
+                if (rp.permission?.name) permissions.add(rp.permission.name);
+            }
         }
-        //3.return user
-        return user;
+
+        return { roles: [...roles], permissions: [...permissions] };
     }
+
+    async login(LoginDto: LoginDto): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        refreshExpiresAt: Date;
+        user: { id: string; email: string; roles: string[] };
+    }> {
+        //1.check if user Email
+        const user = await this.usersService.findOneByEmail(LoginDto.email);
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+        //2.check if user is active
+        if (!user || !user.isActive) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+        //3.check if user is verified
+        if (!user.emailVerifiedAt) {
+            throw new UnauthorizedException('User not verified');
+        }
+        //4.check if password is valid
+        const isPasswordValid = await argon2.verify(user.password, LoginDto.password);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Invalid password');
+        }
+        //5. extract roles and permissions
+        const { roles, permissions } = this.extractRolesAndPermissions(user);
+        //6. create payload
+        const payload: JwtAccessPayload = {
+            sub: user.id,
+            roles,
+            permissions,
+        };
+        //7. generate tokens
+        const accessToken = await this.tokenService.generateAccessToken(payload);
+        const { token: refreshToken, expiresAt: refreshExpiresAt } = await this.tokenService.generateRefreshToken(30);
+        const refreshTokenHash = this.tokenService.hashToken(refreshToken);
+        //8. save refresh token
+        await this.userSessionRepository.save({
+            userId: user.id,
+            refreshTokenHash,
+            expiresAt: refreshExpiresAt,
+            ip: null,
+            userAgent: null,
+        });
+        //9. return tokens
+        return {
+            accessToken,
+            refreshToken,
+            refreshExpiresAt,
+            user: { id: user.id, email: user.email, roles },
+        };
+    };
+
+    // //verifyUser
+    // async verifyUser(LoginDto: LoginDto) {
+    //     const user = await this.usersService.findOneByEmail(LoginDto.email);
+    //     if (!user) {
+    //         throw new UnauthorizedException('User not found');
+    //     }
+    //     //2. Check if password is valid
+    //     const isPasswordValid = await bcrypt.compare(LoginDto.password, user.password);
+    //     if (!isPasswordValid) {
+    //         throw new UnauthorizedException('Invalid password');
+    //     }
+    //     //3.return user
+    //     return user;
+    // }
+
+
 
     //verifyUserRefreshToken
-    async verifyUserRefreshToken(refreshToken: string,email: string) {
-        const user = await this.usersService.findOneByEmail(email);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
-        //2. Check if refresh token is valid
-        const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshToken);
-        if (!isRefreshTokenValid) {
+    async refresh(refreshToken: string): Promise<{
+        accessToken: string;
+        newRefreshToken: string;
+        newRefreshExpiresAt: Date;
+    }> {
+        //1.hash token
+        const refreshTokenHash = this.tokenService.hashToken(refreshToken);
+        //2.find record
+        const session = await this.userSessionRepository.findOne({
+            where: {
+                refreshTokenHash,
+                revokedAt: IsNull(),
+                expiresAt: MoreThan(new Date()),
+            },
+            relations: ['user'],
+        });
+        if (!session) {
             throw new UnauthorizedException('Invalid refresh token');
         }
-        //3.return user
-        return user;
-    }
-    //logout
-    async logout(email: string) {
-        const user = await this.usersService.findOneByEmail(email);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
-        user.refreshToken = null;
-        this.logger.log(`User ${user.email} logged out`);
-        await this.userRepository.save(user);
-        return {
-            message: 'User logged out successfully',
-        };
-    }
 
-    // refresh token
-    async refreshToken(refreshToken: string) {
-        const user = await this.usersService.findOneByEmail(refreshToken);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
+        //3.revoke old refresh token
+        await this.userSessionRepository.update(session.id, {
+            revokedAt: new Date(),
+        });
+        //4. load user roles and permissions
+        const fullUser = await this.userRepository.findOne({
+            where: { id: session.userId },
+            relations: {
+                userRoles: {
+                    role: {
+                        rolePermissions: {
+                            permission: true,
+                        },
+                    },
+                },
+            },
+        });
+        if (!fullUser || !fullUser.isActive) {
+            throw new UnauthorizedException('User not found or inactive');
         }
-        const payload = { email: user.email, sub: user.id, role: user.role };
-        return {
-            access_token: this.jwtService.sign(payload),
+        //4.1 extract roles and permissions
+        const { roles, permissions } = this.extractRolesAndPermissions(fullUser);
+        //5. create payload
+        const payload: JwtAccessPayload = {
+            sub: session.user.id,
+            roles,
+            permissions,
         };
+        //6. generate new tokens
+        const accessToken = await this.tokenService.generateAccessToken(payload);
+        const { token: newRefreshToken, expiresAt: newRefreshExpiresAt } = await this.tokenService.generateRefreshToken(30);
+        const newRefreshTokenHash = this.tokenService.hashToken(newRefreshToken);
+        //7.save new refresh token
+        await this.userSessionRepository.save({
+            userId: fullUser.id,
+            refreshTokenHash: newRefreshTokenHash,
+            expiresAt: newRefreshExpiresAt,
+            ip: null,
+            userAgent: null,
+        });
+        //8.return tokens
+        return {
+            accessToken,
+            newRefreshToken,
+            newRefreshExpiresAt,
+        };
+
     }
     
+    // forgot password
+    async forgotPassword(email: string) {
+        //1.check if user exists
+        const user = await this.usersService.findOneByEmail(email);
+        if (!user) return;
+        //2.generate token
+        const {token,expiresAt} = await this.tokenService.generateEmailVerificationToken(60);
+        const hashedToken = this.tokenService.hashToken(token);
+        //3.save token
+        await this.passwordResetTokenRepository.save({
+            userId: user.id,
+            tokenHash: hashedToken,
+            expiresAt: expiresAt,
+            usedAt: null,
+        });
+        // TODO: send email via MailService
+        console.log({ resetToken: token }); // dev only
+    }
+
+    // reset password
+    async resetPassword(token: string, newPassword: string): Promise<void> {
+        //1.hash token
+        const tokenHash = this.tokenService.hashToken(token);
+        //2.find record
+        const record = await this.passwordResetTokenRepository.findOne({
+            where: {
+                tokenHash,
+                expiresAt: MoreThan(new Date()),
+                usedAt: IsNull(),
+            }
+        });
+        if (!record) {
+            throw new UnauthorizedException('Invalid token');
+        }
+        //3.hash new password
+        const newPasswordHash = await argon2.hash(newPassword);
+        //4.update user password
+        await this.userRepository.update( { id: record.userId }, { password: newPasswordHash });
+        //5.mark token as used
+        await this.passwordResetTokenRepository.update( { id: record.id }, { usedAt: new Date() });
+        //6.revoke all other refresh tokens for this user
+        await this.userSessionRepository.update( { userId: record.userId, revokedAt: IsNull() }, { revokedAt: new Date() });
+    }
+
 }

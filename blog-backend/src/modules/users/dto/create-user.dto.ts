@@ -1,14 +1,16 @@
-import { IsString, IsInt, IsNotEmpty, IsEmail, IsStrongPassword } from 'class-validator';
-import { UserRole } from '../../auth/types/jwt-payload.type.ts';
+import { IsString, IsNotEmpty, IsEmail, IsStrongPassword, IsOptional } from 'class-validator';
+import { UserRole } from '../entities/user-role.entity';
 
 export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
-    firstName: string;
+    @IsOptional()
+    firstName?: string;
 
     @IsString()
     @IsNotEmpty()
-    lastName: string;
+    @IsOptional()
+    lastName?: string;
 
     @IsString()
     @IsNotEmpty()
@@ -24,5 +26,6 @@ export class CreateUserDto {
 
     @IsString()
     @IsNotEmpty()
-    role: UserRole;
+    @IsOptional()
+    role?: UserRole;
 }

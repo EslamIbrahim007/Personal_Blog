@@ -9,7 +9,7 @@ export class TokenService {
   constructor(private readonly jwtService: JwtService, private readonly configService: ConfigService) { }
 
   // Generate Access Token
-  async generateToken(payload: JwtAccessPayload): Promise<string> {
+  async generateAccessToken(payload: JwtAccessPayload): Promise<string> {
     return this.jwtService.sign(payload);
   }
 
