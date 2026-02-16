@@ -18,6 +18,7 @@ import { EmailVerificationToken } from './entities/email-verification-token.enti
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { JwtAccessPayload } from './types/jwt-payload.type';
 import { TokenService } from './services/token.service';
+import { MailService } from './mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
         private readonly configService: ConfigService,
         private readonly logger: Logger,
         private readonly tokenService: TokenService,
+        private readonly mailService: MailService,
         @InjectRepository(User) private readonly userRepository: Repository<User>,
         @InjectRepository(UserSession) private readonly userSessionRepository: Repository<UserSession>,
         @InjectRepository(EmailVerificationToken) private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
@@ -45,10 +47,8 @@ export class AuthService {
             tokenHash,
             expiresAt,
         });
-        // TODO: send email via MailService (next step)
-        // verification link example: https://<frontend>/verify?token=<token>
-        // For API-only now: you can log token in dev (NOT prod).
-        // console.log({ verificationToken: token });
+        // send email via MailService
+        await this.mailService.sendVerifyEmail(user.email, token);
     };
 
     async verifyEmail(token: string) {
@@ -144,23 +144,6 @@ export class AuthService {
         };
     };
 
-    // //verifyUser
-    // async verifyUser(LoginDto: LoginDto) {
-    //     const user = await this.usersService.findOneByEmail(LoginDto.email);
-    //     if (!user) {
-    //         throw new UnauthorizedException('User not found');
-    //     }
-    //     //2. Check if password is valid
-    //     const isPasswordValid = await bcrypt.compare(LoginDto.password, user.password);
-    //     if (!isPasswordValid) {
-    //         throw new UnauthorizedException('Invalid password');
-    //     }
-    //     //3.return user
-    //     return user;
-    // }
-
-
-
     //verifyUserRefreshToken
     async refresh(refreshToken: string): Promise<{
         accessToken: string;
@@ -246,8 +229,8 @@ export class AuthService {
             expiresAt: expiresAt,
             usedAt: null,
         });
-        // TODO: send email via MailService
-        console.log({ resetToken: token }); // dev only
+        // send email via MailService
+        await this.mailService.sendResetPassword(user.email, token);
     }
 
     // reset password

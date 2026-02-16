@@ -18,7 +18,7 @@ export class MailService {
       ].join('\n');
 
     await this.mailer.sendMail({ to, subject, text });
-  }
+  };
 
   async sendResetPassword(to: string, token: string): Promise<void> {
     const subject = 'Reset your password';
