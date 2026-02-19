@@ -10,7 +10,7 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, IsNull } from 'typeorm';
+import { Repository, MoreThan, IsNull, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
 import { UserSession } from './entities/user-session.entity';
@@ -29,6 +29,7 @@ export class AuthService {
         private readonly logger: Logger,
         private readonly tokenService: TokenService,
         private readonly mailService: MailService,
+        private readonly dataSource: DataSource,
         @InjectRepository(User) private readonly userRepository: Repository<User>,
         @InjectRepository(UserSession) private readonly userSessionRepository: Repository<UserSession>,
         @InjectRepository(EmailVerificationToken) private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
@@ -213,14 +214,14 @@ export class AuthService {
         };
 
     }
-    
+
     // forgot password
     async forgotPassword(email: string) {
         //1.check if user exists
         const user = await this.usersService.findOneByEmail(email);
         if (!user) return;
         //2.generate token
-        const {token,expiresAt} = await this.tokenService.generateEmailVerificationToken(60);
+        const { token, expiresAt } = await this.tokenService.generateEmailVerificationToken(60);
         const hashedToken = this.tokenService.hashToken(token);
         //3.save token
         await this.passwordResetTokenRepository.save({
@@ -237,25 +238,39 @@ export class AuthService {
     async resetPassword(token: string, newPassword: string): Promise<void> {
         //1.hash token
         const tokenHash = this.tokenService.hashToken(token);
-        //2.find record
-        const record = await this.passwordResetTokenRepository.findOne({
-            where: {
-                tokenHash,
-                expiresAt: MoreThan(new Date()),
-                usedAt: IsNull(),
+        //2.Transaction
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        try {
+            //2.find record
+            const record = await queryRunner.manager.findOne(PasswordResetToken, {
+                where: {
+                    tokenHash,
+                    expiresAt: MoreThan(new Date()),
+                    usedAt: IsNull(),
+                }
+            });
+            if (!record) {
+                throw new UnauthorizedException('Invalid token');
             }
-        });
-        if (!record) {
-            throw new UnauthorizedException('Invalid token');
+            //3.hash new password
+            const newPasswordHash = await argon2.hash(newPassword);
+            //4.update user password
+            await queryRunner.manager.update(User, { id: record.userId }, { password: newPasswordHash });
+            //5.mark token as used
+            await queryRunner.manager.update(PasswordResetToken, { id: record.id }, { usedAt: new Date() });
+            //6.revoke all other refresh tokens for this user
+            await queryRunner.manager.update(UserSession, { userId: record.userId, revokedAt: IsNull() }, { revokedAt: new Date() });
+            //7.commit transaction
+            await queryRunner.commitTransaction();
         }
-        //3.hash new password
-        const newPasswordHash = await argon2.hash(newPassword);
-        //4.update user password
-        await this.userRepository.update( { id: record.userId }, { password: newPasswordHash });
-        //5.mark token as used
-        await this.passwordResetTokenRepository.update( { id: record.id }, { usedAt: new Date() });
-        //6.revoke all other refresh tokens for this user
-        await this.userSessionRepository.update( { userId: record.userId, revokedAt: IsNull() }, { revokedAt: new Date() });
+        catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        }
+        finally {
+            await queryRunner.release();
+        }
     }
-
 }
