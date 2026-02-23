@@ -1,9 +1,11 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
-
-export class InitAuthRbac1771017291529 implements MigrationInterface {
-    name = 'InitAuthRbac1771017291529'
-
-    public async up(queryRunner: QueryRunner): Promise<void> {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.InitAuthRbac1771017291529 = void 0;
+class InitAuthRbac1771017291529 {
+    constructor() {
+        this.name = 'InitAuthRbac1771017291529';
+    }
+    async up(queryRunner) {
         await queryRunner.query(`CREATE TABLE "permissions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "description" character varying(255), CONSTRAINT "UQ_48ce552495d14eae9b187bb6716" UNIQUE ("name"), CONSTRAINT "PK_920331560282b8bd21bb02290df" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_48ce552495d14eae9b187bb671" ON "permissions" ("name") `);
         await queryRunner.query(`CREATE TABLE "role_permissions" ("role_id" uuid NOT NULL, "permission_id" uuid NOT NULL, CONSTRAINT "PK_25d24010f53bb80b78e412c9656" PRIMARY KEY ("role_id", "permission_id"))`);
@@ -64,8 +66,7 @@ export class InitAuthRbac1771017291529 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "email_verification_tokens" ADD CONSTRAINT "FK_fdcb77f72f529bf65c95d72a147" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "user_sessions" ADD CONSTRAINT "FK_e9658e959c490b0a634dfc54783" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
     }
-
-    public async down(queryRunner: QueryRunner): Promise<void> {
+    async down(queryRunner) {
         await queryRunner.query(`ALTER TABLE "user_sessions" DROP CONSTRAINT "FK_e9658e959c490b0a634dfc54783"`);
         await queryRunner.query(`ALTER TABLE "email_verification_tokens" DROP CONSTRAINT "FK_fdcb77f72f529bf65c95d72a147"`);
         await queryRunner.query(`ALTER TABLE "password_reset_tokens" DROP CONSTRAINT "FK_52ac39dd8a28730c63aeb428c9c"`);
@@ -126,5 +127,6 @@ export class InitAuthRbac1771017291529 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_48ce552495d14eae9b187bb671"`);
         await queryRunner.query(`DROP TABLE "permissions"`);
     }
-
 }
+exports.InitAuthRbac1771017291529 = InitAuthRbac1771017291529;
+//# sourceMappingURL=1771017291529-InitAuthRbac.js.map

@@ -64,10 +64,11 @@ export class AuthController {
       accessToken: result.accessToken,
       user: result.user,
     };
-  }
+  };
+  
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.refresh_token;
+    const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) {
       // AuthService will throw Unauthorized anyway, but keep this explicit
       return { message: 'Missing refresh token' };

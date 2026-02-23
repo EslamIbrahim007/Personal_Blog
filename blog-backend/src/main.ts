@@ -2,7 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import cookieParser from 'cookie-parser';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -16,11 +16,14 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
-    forbidNonWhitelisted: true,   
+    forbidNonWhitelisted: true,
   }));
   app.use(cookieParser());
-  // Start server
-  await app.listen(config.get('port'));
-  console.log(`Application is running on.🚀🚀🚀: ${await app.getUrl()}`);
+  // Start server 
+  const port = config.get('port');
+  await app.listen(port, '0.0.0.0');
+
+  const url = await app.getUrl();
+  console.log(`Application is running on.🚀🚀🚀: ${url}`);
 }
 bootstrap();

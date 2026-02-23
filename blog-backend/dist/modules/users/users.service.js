@@ -16,36 +16,96 @@ exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const argon2 = require("argon2");
 const user_entity_1 = require("./entities/user.entity");
-const bcrypt = require("bcrypt");
+const roles_entity_1 = require("./entities/roles.entity");
+const user_role_entity_1 = require("./entities/user-role.entity");
 let UsersService = class UsersService {
-    constructor(userRepository) {
+    constructor(userRepository, roleRepository, userRoleRepository) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.userRoleRepository = userRoleRepository;
     }
     async create(createUserDto) {
-        const { email, username } = createUserDto;
-        const existingUser = await this.userRepository.findOne({ where: { email: email, username: username } });
+        let { email, username } = createUserDto;
+        email = email.toLowerCase();
+        username = username.toLowerCase();
+        const existingUser = await this.userRepository.findOne({
+            where: [
+                { email: email },
+                { username: username }
+            ]
+        });
         if (existingUser) {
             throw new common_1.ConflictException('User with this email or username already exists');
         }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const user = this.userRepository.create({ ...createUserDto, password: hashedPassword });
-        return this.userRepository.save(user);
+        const hashedPassword = await argon2.hash(createUserDto.password);
+        const user = this.userRepository.create({
+            email,
+            username,
+            password: hashedPassword,
+            isActive: true,
+            emailVerifiedAt: null,
+        });
+        await this.userRepository.save(user);
+        const defaultRole = await this.roleRepository.findOne({ where: { name: 'Reader' } });
+        if (!defaultRole) {
+            throw new common_1.NotFoundException('Default role not found');
+        }
+        const userRole = this.userRoleRepository.create({
+            userId: user.id,
+            roleId: defaultRole.id,
+        });
+        await this.userRoleRepository.save(userRole);
+        return user;
     }
     async findAll() {
         return this.userRepository.find();
     }
     async findOneByEmail(email) {
-        return this.userRepository.findOne({ where: { email } });
+        return this.userRepository.findOne({
+            where: { email: email.toLowerCase() },
+            relations: {
+                userRoles: {
+                    role: {
+                        rolePermissions: {
+                            permission: true,
+                        },
+                    },
+                },
+            },
+        });
     }
-    async remove(id) {
-        await this.userRepository.delete(id);
+    async assignRoleToUser(userId, roleName) {
+        const role = await this.roleRepository.findOne({
+            where: { name: roleName },
+        });
+        if (!role) {
+            throw new common_1.NotFoundException('Role not found');
+        }
+        const existing = await this.userRoleRepository.findOne({
+            where: {
+                userId,
+                roleId: role.id,
+            },
+        });
+        if (existing)
+            return;
+        const userRole = this.userRoleRepository.create({
+            userId,
+            roleId: role.id,
+        });
+        await this.userRoleRepository.save(userRole);
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(roles_entity_1.Role)),
+    __param(2, (0, typeorm_1.InjectRepository)(user_role_entity_1.UserRole)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

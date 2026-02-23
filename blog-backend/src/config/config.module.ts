@@ -8,6 +8,7 @@ import configuration from './configuration';
     NestConfigModule.forRoot({
       load: [configuration],
       isGlobal: true,
+      envFilePath: '.env',
       // validationSchema: EnvValidationSchema, // Uncomment if validation schema is ready
     }),
   ],

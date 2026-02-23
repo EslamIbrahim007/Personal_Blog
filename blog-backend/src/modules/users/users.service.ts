@@ -24,8 +24,13 @@ export class UsersService {
         //2.convert email and username to lowercase
         email = email.toLowerCase();
         username = username.toLowerCase();
-        //3. check if user with same email exists
-        const existingUser = await this.userRepository.findOne({ where: { email: email, username: username } });
+        //3. check if user with same email or username exists
+        const existingUser = await this.userRepository.findOne({
+            where: [
+                { email: email },
+                { username: username }
+            ]
+        });
         if (existingUser) {
             throw new ConflictException('User with this email or username already exists');
         }

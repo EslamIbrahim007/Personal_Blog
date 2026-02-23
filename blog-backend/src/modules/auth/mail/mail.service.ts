@@ -5,6 +5,21 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class MailService {
   constructor(private readonly mailer: MailerService) { }
 
+
+  async sendTestEmail(to: string) {
+    try {
+      await this.mailer.sendMail({
+        to,
+        subject: 'Test Email',
+        text: 'Hello from NestJS!',
+      });
+      console.log('✅ Email sent successfully');
+    } catch (error) {
+      console.error('❌ Failed to send email:', error.message);
+      throw error;
+    }
+  }
+
   async sendVerifyEmail(to: string, token: string): Promise<void> {
     const subject = 'Verify your email';
     const text =

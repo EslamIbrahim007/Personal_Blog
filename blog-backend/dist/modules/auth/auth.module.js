@@ -8,27 +8,41 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
 const auth_service_1 = require("./auth.service");
 const jwt_1 = require("@nestjs/jwt");
-const local_strategy_1 = require("./strategies/local.strategy");
 const users_module_1 = require("../users/users.module");
 const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
-const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
+const token_service_1 = require("./services/token.service");
+const mail_module_1 = require("./mail/mail.module");
+const user_entity_1 = require("../users/entities/user.entity");
+const user_session_entity_1 = require("./entities/user-session.entity");
+const email_verification_token_entity_1 = require("./entities/email-verification-token.entity");
+const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            typeorm_1.TypeOrmModule.forFeature([
+                user_entity_1.User,
+                user_session_entity_1.UserSession,
+                email_verification_token_entity_1.EmailVerificationToken,
+                password_reset_token_entity_1.PasswordResetToken,
+            ]),
             users_module_1.UsersModule,
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '1h' },
+            mail_module_1.MailModule,
+            jwt_1.JwtModule.registerAsync({
+                useFactory: () => ({
+                    secret: process.env.JWT_SECRET || 'your-secret-key',
+                    signOptions: { expiresIn: '1h' },
+                }),
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, local_strategy_1.LocalStrategy, common_1.Logger, jwt_strategy_1.JwtStrategy, jwt_refresh_strategy_1.JwtRefreshStrategy],
+        providers: [auth_service_1.AuthService, common_1.Logger, jwt_strategy_1.JwtStrategy, token_service_1.TokenService],
         exports: [auth_service_1.AuthService],
     })
 ], AuthModule);

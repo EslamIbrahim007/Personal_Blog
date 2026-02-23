@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
+import { MailController } from './mail.controller';
 
 @Module({
   imports: [
@@ -15,6 +16,8 @@ import { MailService } from './mail.service';
         const pass = config.get<string>('SMTP_PASS');
         const from = config.get<string>('MAIL_FROM');
 
+        console.log('📧 SMTP Config:', { host, port, user: user?.slice(0, 5) + '...' });
+
         // Nodemailer: secure=true غالبًا مع 465، و false مع 587 (STARTTLS). :contentReference[oaicite:2]{index=2}
         const secure = port === 465;
 
@@ -24,6 +27,15 @@ import { MailService } from './mail.service';
             port,
             secure,
             auth: user && pass ? { user, pass } : undefined,
+            tls: {
+              rejectUnauthorized: false,
+              minVersion: 'TLSv1.2',
+              ciphers: 'SSLv3',
+            },
+            connectionTimeout: 20000,
+            greetingTimeout: 20000,
+            socketTimeout: 20000,
+            requireTLS: true,
           },
           defaults: {
             from,
@@ -32,7 +44,8 @@ import { MailService } from './mail.service';
       },
     }),
   ],
+  controllers: [MailController],
   providers: [MailService],
   exports: [MailService],
 })
-export class MailModule {}
+export class MailModule { }

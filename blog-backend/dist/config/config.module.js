@@ -19,6 +19,7 @@ exports.ConfigModule = ConfigModule = __decorate([
             config_1.ConfigModule.forRoot({
                 load: [configuration_1.default],
                 isGlobal: true,
+                envFilePath: '.env',
             }),
         ],
     })

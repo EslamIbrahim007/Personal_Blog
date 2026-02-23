@@ -48,8 +48,10 @@ export class AuthService {
             tokenHash,
             expiresAt,
         });
-        // send email via MailService
-        await this.mailService.sendVerifyEmail(user.email, token);
+        // send email via MailService (non-blocking)
+        this.mailService.sendVerifyEmail(user.email, token).catch(err => {
+            this.logger.error(`Failed to send verification email to ${user.email}: ${err.message}`);
+        });
     };
 
     async verifyEmail(token: string) {
