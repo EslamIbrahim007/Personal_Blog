@@ -8,6 +8,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { SearchModule } from './modules/search/search.module';
 import { HealthModule } from './modules/health/health.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { HealthModule } from './modules/health/health.module';
     TagsModule,
     SearchModule,
     HealthModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

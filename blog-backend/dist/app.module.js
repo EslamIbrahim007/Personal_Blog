@@ -17,6 +17,7 @@ const comments_module_1 = require("./modules/comments/comments.module");
 const tags_module_1 = require("./modules/tags/tags.module");
 const search_module_1 = require("./modules/search/search.module");
 const health_module_1 = require("./modules/health/health.module");
+const admin_module_1 = require("./modules/admin/admin.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -32,6 +33,7 @@ exports.AppModule = AppModule = __decorate([
             tags_module_1.TagsModule,
             search_module_1.SearchModule,
             health_module_1.HealthModule,
+            admin_module_1.AdminModule,
         ],
         controllers: [],
         providers: [],
