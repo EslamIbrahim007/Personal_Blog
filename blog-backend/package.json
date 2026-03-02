@@ -25,7 +25,7 @@
     "migration:generate": "yarn typeorm migration:generate -d src/database/data-source.ts",
     "migration:run": "yarn typeorm migration:run -d src/database/data-source.ts",
     "migration:revert": "yarn typeorm migration:revert -d src/database/data-source.ts",
-    "mg": "yarn typeorm migration:generate -d src/database/data-source.ts src/migrations/MigrationName",
+    "migration:create": "yarn typeorm migration:create",
     "mg:win": "yarn typeorm migration:generate -d src/database/data-source.ts src/migrations/%npm_config_name%",
     "seed:rbac": "ts-node src/database/seeds/run-seed.ts"
   },
@@ -54,6 +54,7 @@
     "pg": "^8.11.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "slugify": "^1.6.6",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {

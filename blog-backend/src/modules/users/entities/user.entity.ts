@@ -3,6 +3,7 @@ import { UserRole } from "./user-role.entity";
 import { UserSession } from "../../auth/entities/user-session.entity";
 import { PasswordResetToken } from "../../auth/entities/password-reset-token.entity";
 import { EmailVerificationToken } from "../../auth/entities/email-verification-token.entity";
+import { Post } from "../../posts/entities/post.entity";
 
 
 @Entity('users')

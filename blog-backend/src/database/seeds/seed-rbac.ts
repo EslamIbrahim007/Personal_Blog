@@ -71,7 +71,6 @@ export async function seedRbac(dataSource: DataSource) {
   for (const [roleName, permissionList] of Object.entries(rolePermissionMap)) {
     const role = rolesMap[roleName];
 
-    // امسح كل الصلاحيات القديمة عشان نبقى consistent
     await rolePermRepo.delete({ roleId: role.id });
 
     for (const permKey of permissionList) {
