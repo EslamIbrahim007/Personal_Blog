@@ -14,9 +14,9 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   // Enable global validation
   app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
+    transform: true, // Convert the request body to the class type
+    whitelist: true, // Remove any properties that are not in the class
+    forbidNonWhitelisted: true, // Return error if any properties are not in the class
   }));
   app.use(cookieParser());
   // Start server 
