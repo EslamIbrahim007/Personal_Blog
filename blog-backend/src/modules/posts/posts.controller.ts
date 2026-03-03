@@ -51,4 +51,10 @@ export class PostsController {
   async getPublicBySlug(@Param('lang') lang: 'ar' | 'en', @Param('slug') slug: string) {
     return this.postsService.getPublicBySlug(lang, slug);
   }
+
+  @Get('own/:id')
+  @RequirePermissions('POST_GET_OWN')
+  async getOwnPost(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    return this.postsService.getOwnPost(id, currentUser.id);
+  }
 }

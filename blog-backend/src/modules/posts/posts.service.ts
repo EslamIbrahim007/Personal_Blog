@@ -244,6 +244,18 @@ export class PostsService {
       throw new NotFoundException(`Post with slug ${slug} not found`);
     }
     return post;
+  };
+
+  async getOwnPost(postId: string, userId: string) {
+    const post = await this.postRepo.findOne({
+      where: { id: postId },
+      relations: { translations: true },
+    });
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${postId} not found`);
+    }
+    this.assertOwnership(post, userId);
+    return post;
   }
 }
 function shortId() {
