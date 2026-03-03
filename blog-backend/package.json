@@ -26,7 +26,7 @@
     "migration:run": "yarn typeorm migration:run -d src/database/data-source.ts",
     "migration:revert": "yarn typeorm migration:revert -d src/database/data-source.ts",
     "migration:create": "yarn typeorm migration:create",
-    "mg:win": "yarn typeorm migration:generate -d src/database/data-source.ts src/migrations/%npm_config_name%",
+    "mg": "yarn typeorm migration:generate -d src/database/data-source.ts",
     "seed:rbac": "ts-node src/database/seeds/run-seed.ts"
   },
   "dependencies": {
