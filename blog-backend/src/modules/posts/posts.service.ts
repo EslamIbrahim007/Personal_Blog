@@ -10,7 +10,7 @@ import slugify from "slugify";
 import { PostStatus } from "./dto/post-status.enum";
 import { randomBytes } from "crypto";
 import { ListPostsQueryDto } from "./dto/list-posts.query.dto";
-
+import { buildSlug } from "src/common/utils/slug.util";
 
 
 @Injectable()
@@ -26,11 +26,7 @@ export class PostsService {
   // Build Slug
   private BuildSlug(title: string, fallbackPrefix?: 'post'): string {
     //slugify
-    const slug = slugify(title, {
-      lower: true,
-      strict: true, //remove special characters ; for arabic 
-      trim: true,
-    });
+    const slug = buildSlug(title);
 
     if (slug && slug.length >= 3) return slug;
 
@@ -77,7 +73,8 @@ export class PostsService {
       //create translations
       const translations: PostTranslation[] = [];
       for (const t of createPostDto.translations) {
-        const slug = t.slug?.trim() || this.BuildSlug(t.title, 'post').toLowerCase();
+        const baseSlug = t.slug?.trim() || buildSlug(t.title);
+        const slug = baseSlug.length >= 3 ? baseSlug : `${baseSlug}-${shortId()}`;
 
         //check if slug exists
         const existing = await manager.findOne(PostTranslation, {
@@ -141,9 +138,8 @@ export class PostsService {
         });
 
         const nextTitle = t.title?.trim() || tr.title;
-        const nextSlug = t.slug?.trim() ||
-          (t.title ? this.BuildSlug(t.title).toLowerCase() : tr?.slug) ||
-          this.BuildSlug(nextTitle).toLowerCase();
+        const baseSlug = t.slug?.trim() || buildSlug(t.title);
+        const nextSlug = baseSlug.length >= 3 ? baseSlug : `${baseSlug}-${shortId()}`;
 
         //ensure unique slug
         const conflict = await manager.findOne(PostTranslation, {
