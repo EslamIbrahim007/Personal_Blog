@@ -20,17 +20,17 @@ export class PostTranslation {
     @Column({ name: 'language', type: 'varchar', length: 5 })
     language: "en" | "ar";
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255 , nullable: true})
     title: string;
 
     @Index()
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255 , nullable: true})
     slug: string;
 
-    @Column({ type: 'varchar', length: 255 })
+    @Column({ type: 'varchar', length: 255 , nullable: true})
     excerpt: string;
 
-    @Column({ type: 'text' })
+    @Column({ type: 'text' , nullable: true})
     content: string;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })

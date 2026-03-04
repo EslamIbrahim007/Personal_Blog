@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, IsArray, IsIn, IsNotEmpty, IsString, MinLength, ValidateNested } from "class-validator";
+import { ArrayMinSize, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MinLength, ValidateNested } from "class-validator";
 export class CreatPostTranslationDto {
     @IsString()
     @IsNotEmpty()
@@ -9,11 +9,13 @@ export class CreatPostTranslationDto {
     @IsString()
     @IsNotEmpty()
     @MinLength(3)
+    @IsOptional()
     slug?: string;
 
     @IsString()
     @IsNotEmpty()
     @MinLength(3)
+    @IsOptional()
     excerpt?: string;
 
     @IsString()
