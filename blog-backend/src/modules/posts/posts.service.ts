@@ -243,10 +243,11 @@ export class PostsService {
   };
 
   async getOwnPost(postId: string, userId: string) {
-    const post = await this.postRepo.findOne({
-      where: { id: postId },
-      relations: { translations: true },
-    });
+    const post = await this.postRepo
+    .createQueryBuilder('post')
+    .leftJoinAndSelect('post.translations', 'translations')
+    .where('post.id = :postId', { postId })  // هنا الـ parameterization بيحل المشكلة
+    .getOne();
     if (!post) {
       throw new NotFoundException(`Post with ID ${postId} not found`);
     }

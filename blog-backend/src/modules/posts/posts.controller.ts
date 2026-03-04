@@ -8,6 +8,7 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { CurrentUser } from "../../Decorator/current-user.decorator";
 import { User } from "../users/entities/user.entity";
 import { ListPostsQueryDto } from "./dto/list-posts.query.dto";
+import { Logger } from '@nestjs/common';
 
 @Controller('posts')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -43,18 +44,23 @@ export class PostsController {
   @Get('public')
   async listPublic(
     @Query() query: ListPostsQueryDto,
-    ) {
+  ) {
     return this.postsService.listPublic(query);
-  }
-
-  @Get(':lang/:slug')
-  async getPublicBySlug(@Param('lang') lang: 'ar' | 'en', @Param('slug') slug: string) {
-    return this.postsService.getPublicBySlug(lang, slug);
   }
 
   @Get('own/:id')
   @RequirePermissions('POST_GET_OWN')
   async getOwnPost(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    //this.logger.log(`User: ${JSON.stringify(currentUser)}`);
+   // this.logger.log(`User Permissions: ${JSON.stringify(currentUser?.permissions)}`);
+
     return this.postsService.getOwnPost(id, currentUser.id);
   }
+
+  @Get(':lang/:slug')
+  async getPublicBySlug(@Param('lang') lang: 'ar' | 'en', @Param('slug') slug: string) {
+
+    return this.postsService.getPublicBySlug(lang, slug);
+  }
+
 }
