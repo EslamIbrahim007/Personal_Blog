@@ -8,12 +8,14 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { CurrentUser } from "../../Decorator/current-user.decorator";
 import { User } from "../users/entities/user.entity";
 import { ListPostsQueryDto } from "./dto/list-posts.query.dto";
-import { Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common'; 
 
 @Controller('posts')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PostsController {
-  constructor(private readonly postsService: PostsService) { }
+  constructor(private readonly postsService: PostsService, private readonly logger: Logger) { 
+    
+  }
 
   @Post('create')
   @RequirePermissions('POST_CREATE')
@@ -51,9 +53,6 @@ export class PostsController {
   @Get('own/:id')
   @RequirePermissions('POST_GET_OWN')
   async getOwnPost(@Param('id') id: string, @CurrentUser() currentUser: User) {
-    //this.logger.log(`User: ${JSON.stringify(currentUser)}`);
-   // this.logger.log(`User Permissions: ${JSON.stringify(currentUser?.permissions)}`);
-
     return this.postsService.getOwnPost(id, currentUser.id);
   }
 

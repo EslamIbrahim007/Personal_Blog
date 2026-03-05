@@ -1,4 +1,5 @@
 import { IsIn, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { Type } from "class-transformer";  
 
 export class ListPostsQueryDto {
     @IsIn(["en", "ar"])
@@ -10,14 +11,15 @@ export class ListPostsQueryDto {
 
     @IsNumber()
     @IsOptional()
-    @Min(1
-    )
+    @Min(1)
+    @Type(() => Number)  
     page?: number;
 
     @IsNumber()
     @IsOptional()
     @Min(1)
     @Max(50)
+    @Type(() => Number)  
     limit?: number;
 
     @IsString()

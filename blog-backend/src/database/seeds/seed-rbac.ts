@@ -33,6 +33,7 @@ export async function seedRbac(dataSource: DataSource) {
     'POST_UPDATE_OWN',
     'POST_DELETE_OWN',
     'POST_PUBLISH_OWN',
+    'POST_GET_OWN',
     'CATEGORY_MANAGE',
     'TAG_MANAGE',
     'USER_MANAGE',
@@ -61,8 +62,9 @@ export async function seedRbac(dataSource: DataSource) {
       'POST_UPDATE_OWN',
       'POST_DELETE_OWN',
       'POST_PUBLISH_OWN',
+      'POST_GET_OWN',
     ],
-    Reader: [],
+    Reader: [], 
   };
 
   // ======================

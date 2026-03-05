@@ -218,7 +218,7 @@ export class PostsService {
       .andWhere('post.publishedAt IS NOT NULL')
 
 
-    if (query.search.trim() !== '') {
+    if (query.search && query.search.trim() !== '') {
       qb.andWhere('translation.title ILIKE :q OR translation.content ILIKE :q', { q: `%${query.search}%` });
     }
 
@@ -232,8 +232,8 @@ export class PostsService {
   async getPublicBySlug(lang: 'ar' | 'en', slug: string) {
     const post = await this.postRepo
       .createQueryBuilder('post')
-      .innerJoinAndSelect('post.translations', 'translation', 'translation.language = :lang', { lang, slug })
-      .andWhere('post.status = :status', { status: PostStatus.PUBLISHED })
+      .innerJoinAndSelect('post.translations', 'translation', 'translation.language = :lang AND translation.slug = :slug', { lang, slug })
+      .where('post.status = :status', { status: PostStatus.PUBLISHED })
       .andWhere('post.publishedAt IS NOT NULL')
       .getOne();
     if (!post) {
@@ -244,16 +244,16 @@ export class PostsService {
 
   async getOwnPost(postId: string, userId: string) {
     const post = await this.postRepo
-    .createQueryBuilder('post')
-    .leftJoinAndSelect('post.translations', 'translations')
-    .where('post.id = :postId', { postId })  // هنا الـ parameterization بيحل المشكلة
-    .getOne();
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.translations', 'translations')
+      .where('post.id = :postId', { postId })  // هنا الـ parameterization بيحل المشكلة
+      .getOne();
     if (!post) {
       throw new NotFoundException(`Post with ID ${postId} not found`);
     }
     this.assertOwnership(post, userId);
     return post;
-  }
+  };
 }
 function shortId() {
   return randomBytes(4).toString('hex');
