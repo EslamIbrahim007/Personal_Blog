@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource, Not } from "typeorm";
+import { Repository, DataSource, Not, In } from "typeorm";
 import { Post } from "./entities/post.entity";
 import { PostTranslation } from "./entities/post-translation.entity";
 import { CreatePostDto } from "./dto/create-post.dto";
@@ -11,6 +11,8 @@ import { PostStatus } from "./dto/post-status.enum";
 import { randomBytes } from "crypto";
 import { ListPostsQueryDto } from "./dto/list-posts.query.dto";
 import { buildSlug } from "src/common/utils/slug.util";
+import { Category } from "../categories/entities/category.entity";
+import { Tag } from "../tags/entities/tag.entity";
 
 
 @Injectable()
@@ -20,6 +22,10 @@ export class PostsService {
     private readonly postRepo: Repository<Post>,
     @InjectRepository(PostTranslation)
     private readonly postTranslationRepo: Repository<PostTranslation>,
+    @InjectRepository(Category)
+    private readonly categoryRepo: Repository<Category>,
+    @InjectRepository(Tag)
+    private readonly tagRepo: Repository<Tag>,
     private readonly dataSource: DataSource,
   ) { }
 
@@ -60,13 +66,35 @@ export class PostsService {
     if (uniqueLanguages.size !== languages.length) {
       throw new BadRequestException('Duplicate languages found');
     }
+
     //3. create post and translations
     return this.dataSource.transaction(async (manager) => {
+      //3.1 check for category and tags 
+      let categories: Category[] = []
+      if (createPostDto.categoryIds?.length) {
+        const categories = await manager.findBy(Category, {
+          id: In(createPostDto.categoryIds)
+        });
+        if (categories.length !== createPostDto.categoryIds.length) {
+          throw new BadRequestException('Some categories do not exist');
+        }
+      }
+      let tags: Tag[] = []
+      if (createPostDto.tagIds?.length) {
+        const tags = await manager.findBy(Tag, {
+          id: In(createPostDto.tagIds)
+        });
+        if (tags.length !== createPostDto.tagIds.length) {
+          throw new BadRequestException('Some tags do not exist');
+        }
+      }
       const post = manager.create(Post, {
         authorId,
         status: PostStatus.DRAFT,
         publishedAt: null,
       });
+      post.categories = categories;
+      post.tags = tags;
 
       await manager.save(post);
 
@@ -106,7 +134,7 @@ export class PostsService {
   }
 
   private async getPostOrFail(id: string) {
-    const post = await this.postRepo.findOne({ where: { id } });
+    const post = await this.postRepo.findOne({ where: { id } ,relations:{translations:true,categories:true,tags:true}});
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
@@ -169,10 +197,27 @@ export class PostsService {
           });
         }
         await manager.save(tr);
+        // categories 
+        if(updatePostDto.categoryIds?.length){
+          const categories = await manager.findBy(Category, {
+            id: In(updatePostDto.categoryIds)
+          });
+          post.categories = categories;
+        }
+        // tags
+        if(updatePostDto.tagIds?.length){
+          const tags = await manager.findBy(Tag, {
+            id: In(updatePostDto.tagIds)
+          });
+          post.tags = tags;
+        }
+
+        await manager.save(post);
+
       }
       return manager.findOne(Post, {
         where: { id: post.id },
-        relations: { translations: true },
+        relations: { translations: true, categories: true, tags: true },
       });
 
     });
@@ -210,6 +255,7 @@ export class PostsService {
     const take = Math.min(Math.max(query.limit, 1), 50);
     const skip = (Math.max(query.page, 1) - 1) * take;
     const order = query.sortOrder === 'DESC' ? 'DESC' : 'ASC';
+    const {category,tag,...rest} = query;
 
     const qb = this.postRepo
       .createQueryBuilder('post')
@@ -217,9 +263,18 @@ export class PostsService {
       .andWhere('post.status = :status', { status: PostStatus.PUBLISHED })
       .andWhere('post.publishedAt IS NOT NULL')
 
+    if (category) {
+      qb.innerJoin('p.categories', 'c')
+        .andWhere('c.slug = :category', { category });
+    }
 
-    if (query.search && query.search.trim() !== '') {
-      qb.andWhere('translation.title ILIKE :q OR translation.content ILIKE :q', { q: `%${query.search}%` });
+    if (tag) {
+      qb.innerJoin('p.tags', 'tg')
+        .andWhere('tg.slug = :tag', { tag });
+    }
+
+    if (rest.search && rest.search.trim() !== '') {
+      qb.andWhere('translation.title ILIKE :q OR translation.content ILIKE :q', { q: `%${rest.search}%` });
     }
 
     qb.orderBy(`post.publishedAt`, order).skip(skip).take(take);

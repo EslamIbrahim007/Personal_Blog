@@ -29,4 +29,12 @@ export class ListPostsQueryDto {
     @IsIn(["ASC", "DESC"])
     @IsOptional()
     sortOrder?: "ASC" | "DESC";
+
+    @IsOptional()
+    @IsString()
+    category?:string;
+
+    @IsOptional()
+    @IsString()
+    tag?:string
 }

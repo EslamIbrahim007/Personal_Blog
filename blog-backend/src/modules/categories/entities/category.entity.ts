@@ -1,8 +1,8 @@
 import { Column, Entity, Index, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Post } from "../../posts/entities/post.entity";
 
-@Entity('tags')
-export class Tag{
+@Entity('categories')
+export class Category{
     @PrimaryGeneratedColumn('uuid')
     id:string;
 
@@ -20,7 +20,7 @@ export class Tag{
     @Column()
     updatedAt:Date;
 
-    @OneToMany(()=>Post, (post)=>post.tags)
+    @OneToMany(()=>Post, (post)=>post.categories)
     posts:Post[];
 
 }

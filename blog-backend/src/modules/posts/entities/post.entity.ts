@@ -1,7 +1,9 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import {User} from "../../users/entities/user.entity";
 import { PostTranslation } from "./post-translation.entity";
 import {PostStatus} from "../dto/post-status.enum";
+import { Category } from "../../categories/entities/category.entity";
+import { Tag } from "../../tags/entities/tag.entity";
 
 
 
@@ -36,4 +38,20 @@ export class Post{
 
     @OneToMany(() => PostTranslation, (translation) => translation.post,{cascade: true})
     translations: PostTranslation[];
+
+    @ManyToMany(() => Category, (category) => category.posts)
+    @JoinTable({
+        name: 'post_categories',
+        joinColumn: { name: 'post_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'category_id', referencedColumnName: 'id' },
+    })
+    categories: Category[];
+
+    @ManyToMany(() => Tag, (tag) => tag.posts)
+    @JoinTable({
+        name: 'post_tags',
+        joinColumn: { name: 'post_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
+    })
+    tags: Tag[];  
 }

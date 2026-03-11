@@ -27,6 +27,8 @@ export class CreatPostTranslationDto {
     @IsNotEmpty()
     @IsIn(['en', 'ar'])
     language: "en" | "ar";
+
+    
 }
 
 export class CreatePostDto {
@@ -35,4 +37,13 @@ export class CreatePostDto {
     @ValidateNested({ each: true })
     @Type(() => CreatPostTranslationDto)
     translations: CreatPostTranslationDto[];
+
+    @IsOptional()
+    @IsArray()
+    @IsOptional()
+    categoryIds?: string[];
+
+    @IsArray()
+    @IsOptional()
+    tagIds?: string[];
 }
