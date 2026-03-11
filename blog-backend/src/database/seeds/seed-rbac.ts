@@ -39,6 +39,10 @@ export async function seedRbac(dataSource: DataSource) {
     'TAG_MANAGE',
     'USER_MANAGE',
     'ROLE_MANAGE',
+    'COMMENT_MODERATE',
+    'COMMENT_DELETE_ANY',
+    'COMMENT_DELETE_OWN',
+    'COMMENT_CREATE'
   ];
 
   const permsMap: Record<string, Permission> = {};
@@ -64,8 +68,14 @@ export async function seedRbac(dataSource: DataSource) {
       'POST_DELETE_OWN',
       'POST_PUBLISH_OWN',
       'POST_GET_OWN',
+      'POST_RESTORE_OWN',
+      'COMMENT_CREATE',
+      'COMMENT_DELETE_OWN',
     ],
-    Reader: [], 
+    Reader: [
+      'COMMENT_CREATE',
+      'COMMENT_DELETE_OWN'
+    ], 
   };
 
   // ======================
