@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource, Not, In } from "typeorm";
+import { Repository, DataSource, Not, In, IsNull } from "typeorm";
 import { Post } from "./entities/post.entity";
 import { PostTranslation } from "./entities/post-translation.entity";
 import { CreatePostDto } from "./dto/create-post.dto";
@@ -245,7 +245,7 @@ export class PostsService {
     const post = await this.getPostOrFail(postId);
     this.assertOwnership(post, userId);
     //2. delete post
-    await this.postRepo.delete(postId);
+    await this.postRepo.softDelete(post.id);
     //3. return success message
     return { message: 'Post deleted successfully' };
   }
@@ -262,6 +262,7 @@ export class PostsService {
       .innerJoinAndSelect('post.translations', 'translation', 'translation.language = :lang', { lang: query.lang })
       .andWhere('post.status = :status', { status: PostStatus.PUBLISHED })
       .andWhere('post.publishedAt IS NOT NULL')
+      .andWhere('post.deletedAt IS NULL');
 
     if (category) {
       qb.innerJoin('p.categories', 'c')
@@ -308,6 +309,29 @@ export class PostsService {
     }
     this.assertOwnership(post, userId);
     return post;
+  };
+
+  async restorePost(postId:string,userId:string){
+    //1. get post and assert ownership
+    const post = await this.getPostOrFail(postId);
+    this.assertOwnership(post, userId);
+    //2. restore post
+    await this.postRepo.restore(post.id);
+    //3. return post with translations
+    return this.getPostOrFail(postId);
+  };
+
+  async listDeleted() {
+   
+    return this.postRepo.find({
+      withDeleted:true,
+      where:{
+        deletedAt:Not(IsNull())
+      },
+      relations:{
+        translations:true
+      }
+    })
   };
 }
 function shortId() {

@@ -8,13 +8,13 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { CurrentUser } from "../../Decorator/current-user.decorator";
 import { User } from "../users/entities/user.entity";
 import { ListPostsQueryDto } from "./dto/list-posts.query.dto";
-import { Logger } from '@nestjs/common'; 
+import { Logger } from '@nestjs/common';
 
 @Controller('posts')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PostsController {
-  constructor(private readonly postsService: PostsService, private readonly logger: Logger) { 
-    
+  constructor(private readonly postsService: PostsService, private readonly logger: Logger) {
+
   }
 
   @Post('create')
@@ -61,5 +61,9 @@ export class PostsController {
 
     return this.postsService.getPublicBySlug(lang, slug);
   }
-
+  @Post('restore/:id')
+  @RequirePermissions('POST_RESTORE_OWN')
+  async restore(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    return this.postsService.restorePost(id, currentUser.id);
+  }
 }

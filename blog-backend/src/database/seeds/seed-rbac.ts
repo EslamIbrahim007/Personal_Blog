@@ -34,6 +34,7 @@ export async function seedRbac(dataSource: DataSource) {
     'POST_DELETE_OWN',
     'POST_PUBLISH_OWN',
     'POST_GET_OWN',
+    'POST_RESTORE_OWN',
     'CATEGORY_MANAGE',
     'TAG_MANAGE',
     'USER_MANAGE',
