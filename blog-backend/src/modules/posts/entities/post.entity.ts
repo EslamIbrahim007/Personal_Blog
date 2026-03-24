@@ -4,6 +4,7 @@ import { PostTranslation } from "./post-translation.entity";
 import {PostStatus} from "../dto/post-status.enum";
 import { Category } from "../../categories/entities/category.entity";
 import { Tag } from "../../tags/entities/tag.entity";
+import { Comment } from "src/modules/comments/entities/comment.entity";
 
 
 
@@ -57,4 +58,7 @@ export class Post{
         inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
     })
     tags: Tag[];  
+
+    @OneToMany(()=>Comment,(comment)=>comment.post)
+    comments:Comment[]
 }

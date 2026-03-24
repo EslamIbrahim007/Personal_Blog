@@ -4,6 +4,7 @@ import { UserSession } from "../../auth/entities/user-session.entity";
 import { PasswordResetToken } from "../../auth/entities/password-reset-token.entity";
 import { EmailVerificationToken } from "../../auth/entities/email-verification-token.entity";
 import { Post } from "../../posts/entities/post.entity";
+import { Comment } from "src/modules/comments/entities/comment.entity";
 
 
 @Entity('users')
@@ -59,4 +60,7 @@ export class User {
 
     @OneToMany(() => EmailVerificationToken, (t) => t.user)
     emailVerificationTokens: EmailVerificationToken[];
+
+    @OneToMany(()=>Comment,(comment)=>comment.author)
+    comments:Comment[]
 }
